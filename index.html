@@ -404,12 +404,13 @@
                         </div>
                         
                         <div class="input-group">
-                            <label for="status">Status:</label>
-                            <select id="status">
-                                <option value="present">Present ✅</option>
-                                <option value="absent">Absent ❌</option>
-                            </select>
-                        </div>
+    <label for="status">Status:</label>
+    <select id="status">
+        <option value="present">Present ✅</option>
+        <option value="absent">Absent ❌</option>
+    </select>
+</div>
+
                     </div>
                     
                     <button class="btn" onclick="markAttendance()">Mark Attendance</button>
@@ -588,55 +589,70 @@
 
         // Update summary
         function updateSummary() {
-            const summaryContent = document.getElementById('summary-content');
-            
-            if (Object.keys(attendanceData).length === 0) {
-                summaryContent.innerHTML = '<p>No attendance records found. Start by marking your attendance!</p>';
-                return;
-            }
-            
-            let html = '<h3>📊 Attendance Summary</h3>';
-            
-            Object.keys(attendanceData).forEach(subject => {
-                const records = attendanceData[subject];
-                const totalClasses = records.length;
-                const presentClasses = records.filter(r => r.status === 'present').length;
-                const percentage = totalClasses > 0 ? (presentClasses / totalClasses * 100) : 0;
-                
-                let statusColor = 'var(--success-color)';
-                if (percentage < 75) statusColor = 'var(--warning-color)';
-                if (percentage < 65) statusColor = 'var(--danger-color)';
-                
-                html += `
-                    <div class="attendance-card" style="border-left-color: ${statusColor};">
-                        <h4>${subject}</h4>
-                        <div class="stats">
-                            <div class="stat">
-                                <div class="stat-value">${presentClasses}</div>
-                                <div class="stat-label">Present</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">${totalClasses - presentClasses}</div>
-                                <div class="stat-label">Absent</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value">${totalClasses}</div>
-                                <div class="stat-label">Total</div>
-                            </div>
-                            <div class="stat">
-                                <div class="stat-value" style="color: ${statusColor};">${percentage.toFixed(1)}%</div>
-                                <div class="stat-label">Attendance</div>
-                            </div>
-                        </div>
-                        <div class="percentage-bar">
-                            <div class="percentage-fill" style="width: ${percentage}%; background: ${statusColor};"></div>
-                        </div>
+    const summaryContent = document.getElementById('summary-content');
+    
+    if (Object.keys(attendanceData).length === 0) {
+        summaryContent.innerHTML = '<p>No attendance records found. Start by marking your attendance!</p>';
+        return;
+    }
+    
+    let html = '<h3>📊 Attendance Summary</h3>';
+    
+    Object.keys(attendanceData).forEach(subject => {
+        const records = attendanceData[subject];
+        
+        // Filter out "none" status and only count present, absent, cancelled
+        const validRecords = records.filter(r => ['present', 'absent', 'cancelled'].includes(r.status));
+        const totalClasses = validRecords.length;
+        const presentClasses = validRecords.filter(r => r.status === 'present').length;
+        const absentClasses = validRecords.filter(r => r.status === 'absent').length;
+        const cancelledClasses = validRecords.filter(r => r.status === 'cancelled').length;
+        
+        // Calculate percentage based only on present and absent (cancelled classes don't count for percentage)
+        const attendableClasses = presentClasses + absentClasses;
+        const percentage = attendableClasses > 0 ? (presentClasses / attendableClasses * 100) : 0;
+        
+        let statusColor = 'var(--success-color)';
+        if (percentage < 75) statusColor = 'var(--warning-color)';
+        if (percentage < 65) statusColor = 'var(--danger-color)';
+        
+        html += `
+            <div class="attendance-card" style="border-left-color: ${statusColor};">
+                <h4>${subject}</h4>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">${presentClasses}</div>
+                        <div class="stat-label">Present</div>
                     </div>
-                `;
-            });
-            
-            summaryContent.innerHTML = html;
-        }
+                    <div class="stat">
+                        <div class="stat-value">${absentClasses}</div>
+                        <div class="stat-label">Absent</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">${cancelledClasses}</div>
+                        <div class="stat-label">Cancelled</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">${totalClasses}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" style="color: ${statusColor};">${percentage.toFixed(1)}%</div>
+                        <div class="stat-label">Attendance</div>
+                    </div>
+                </div>
+                <div class="percentage-bar">
+                    <div class="percentage-fill" style="width: ${percentage}%; background: ${statusColor};"></div>
+                </div>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    Percentage calculated from Present + Absent only (Cancelled classes excluded)
+                </p>
+            </div>
+        `;
+    });
+    
+    summaryContent.innerHTML = html;
+}
 
         function updateSubjectSuggestions() {
             const subjects = Object.keys(attendanceData);
@@ -652,23 +668,23 @@
 
         // Export functions
         function exportToCSV() {
-            if (Object.keys(attendanceData).length === 0) {
-                alert('No data to export');
-                return;
-            }
-            
-            let csv = 'User,Subject,Date,Period,Status,Timestamp\n';
-            
-            Object.keys(attendanceData).forEach(subject => {
-                attendanceData[subject].forEach(record => {
-                    const timestamp = record.timestamp ? new Date(record.timestamp).toISOString() : 'N/A';
-                    csv += `"${currentUser.displayName}","${subject}","${record.date}","${record.period}","${record.status}","${timestamp}"\n`;
-                });
-            });
-            
-            downloadFile(csv, `attendance_report_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
-            showSuccessMessage('📊 CSV exported successfully!');
-        }
+    if (Object.keys(attendanceData).length === 0) {
+        alert('No data to export');
+        return;
+    }
+    
+    let csv = 'User,Subject,Date,Period,Status,Timestamp\n';
+    
+    Object.keys(attendanceData).forEach(subject => {
+        attendanceData[subject].forEach(record => {
+            const timestamp = record.timestamp ? new Date(record.timestamp).toISOString() : 'N/A';
+            csv += `"${currentUser.displayName}","${subject}","${record.date}","${record.period}","${record.status}","${timestamp}"\n`;
+        });
+    });
+    
+    downloadFile(csv, `attendance_report_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+    showSuccessMessage('📊 CSV exported successfully!');
+}
 
         function exportToJSON() {
             if (Object.keys(attendanceData).length === 0) {
